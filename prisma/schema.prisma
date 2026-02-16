@@ -1,0 +1,56 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model DutySession {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  startTime DateTime
+  endTime   DateTime?
+  duration  Int?     // dalam menit
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  type        String   // ambil_bahan | masak | stock
+  description String
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+}
+
+model Stock {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  quantity    Int
+  maxStock    Int
+  updatedAt   DateTime @updatedAt
+
+  ingredients RecipeIngredient[]
+}
+
+model Recipe {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  ingredients RecipeIngredient[]
+}
+
+model RecipeIngredient {
+  id        Int    @id @default(autoincrement())
+
+  recipe    Recipe @relation(fields: [recipeId], references: [id])
+  recipeId  Int
+
+  stock     Stock  @relation(fields: [stockId], references: [id])
+  stockId   Int
+
+  amount    Int
+}
+
+
