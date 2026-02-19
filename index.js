@@ -163,7 +163,7 @@ const commands = [
     .addStringOption(option =>
       option.setName("deskripsi")
         .setDescription("Deskripsi pembelian (opsional)")
-        .setRequired(false)
+        .setRequired(true)
     )
 
 ].map(cmd => cmd.toJSON());
@@ -459,60 +459,84 @@ if (interaction.commandName === "stock_update") {
   await sendStockToChannel();
 }
 
-    if (interaction.commandName === "belanja") {
+if (interaction.commandName === "belanja") {
 
-      const bahanInput = interaction.options.getString("bahan");
-      const jumlah = interaction.options.getInteger("jumlah");
-      const deskripsi = interaction.options.getString("deskripsi") || "-";
+  const itemsInput = interaction.options.getString("items");
+  const deskripsi = interaction.options.getString("deskripsi");
 
-      const stock = await prisma.stock.findFirst({
+  // Format parsing: nama1:jumlah, nama2:jumlah
+  const itemsArray = itemsInput.split(",");
+
+  let totalSemua = 0;
+  let summaryText = "";
+
+  await prisma.$transaction(async tx => {
+
+    for (let rawItem of itemsArray) {
+
+      const [namaRaw, jumlahRaw] = rawItem.split(":");
+
+      if (!namaRaw || !jumlahRaw)
+        throw new Error("Format salah. Gunakan nama:jumlah");
+
+      const nama = namaRaw.trim();
+      const jumlah = parseInt(jumlahRaw.trim());
+
+      if (isNaN(jumlah) || jumlah <= 0)
+        throw new Error(`Jumlah tidak valid untuk ${nama}`);
+
+      const stock = await tx.stock.findFirst({
         where: {
           name: {
-            equals: bahanInput,
+            equals: nama,
             mode: "insensitive"
           }
         }
       });
 
       if (!stock)
-        return interaction.reply({
-          content: "Bahan tidak ditemukan di database.",
-          flags: 64
-        });
+        throw new Error(`Bahan ${nama} tidak ditemukan.`);
 
       const hargaPerPcs = stock.price;
       const totalHarga = hargaPerPcs * jumlah;
       const newQuantity = stock.quantity + jumlah;
 
-      await prisma.stock.update({
+      await tx.stock.update({
         where: { id: stock.id },
         data: { quantity: newQuantity }
       });
 
-      await interaction.reply(
-        `🛒 **BELANJA BERHASIL**\n\n` +
-        `📦 Bahan      : ${stock.name}\n` +
-        `📊 Jumlah     : +${jumlah}\n` +
-        `💰 Harga/Pcs  : ${hargaPerPcs}\n` +
-        `💵 Total      : ${totalHarga}\n` +
-        `📝 Deskripsi  : ${deskripsi}\n\n` +
-        `📈 Stock Sekarang : ${newQuantity}`
-      );
+      totalSemua += totalHarga;
 
-      const embed = new EmbedBuilder()
-        .setTitle("🛒 BELANJA")
-        .addFields(
-          { name: "User", value: username },
-          { name: "Bahan", value: stock.name },
-          { name: "Jumlah", value: `+${jumlah}` },
-          { name: "Total", value: `${totalHarga}` }
-        )
-        .setTimestamp()
-        .setColor("Purple");
-
-      await sendLog(embed);
-      await sendStockToChannel();
+      summaryText +=
+        `📦 ${stock.name}\n` +
+        `   +${jumlah} pcs\n` +
+        `   Total: ${totalHarga}\n\n`;
     }
+
+  });
+
+  await interaction.reply(
+    `🛒 **BELANJA BERHASIL** 🛒\n\n` +
+    summaryText +
+    `📝 Deskripsi: ${deskripsi}\n\n` +
+    `💵 TOTAL SEMUA: ${totalSemua}`
+  );
+
+  const embed = new EmbedBuilder()
+    .setTitle("🛒 BELANJA MULTI ITEM")
+    .addFields(
+      { name: "User", value: username },
+      { name: "Total Belanja", value: `${totalSemua}` },
+      { name: "Deskripsi", value: deskripsi }
+    )
+    .setTimestamp()
+    .setColor("Purple");
+
+  await sendLog(embed);
+  await sendStockToChannel();
+}
+
 
   } catch (err) {
     console.error(err);
