@@ -12,25 +12,26 @@ model DutySession {
   userId    String
   startTime DateTime
   endTime   DateTime?
-  duration  Int?     // dalam menit
+  duration  Int?
   createdAt DateTime @default(now())
 }
 
 model ActivityLog {
   id          Int      @id @default(autoincrement())
   userId      String
-  type        String   // ambil_bahan | masak | stock
+  type        String
   description String
   imageUrl    String?
   createdAt   DateTime @default(now())
 }
 
 model Stock {
-  id          Int      @id @default(autoincrement())
-  name        String   @unique
-  quantity    Int
-  maxStock    Int
-  updatedAt   DateTime @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  quantity  Int
+  maxStock  Int
+  price     Int      @default(0)
+  updatedAt DateTime @updatedAt
 
   ingredients RecipeIngredient[]
 }
@@ -38,19 +39,25 @@ model Stock {
 model Recipe {
   id          Int      @id @default(autoincrement())
   name        String   @unique
+  category    String   // "food" atau "drink"
   ingredients RecipeIngredient[]
 }
 
 model RecipeIngredient {
-  id        Int    @id @default(autoincrement())
+  id       Int @id @default(autoincrement())
 
-  recipe    Recipe @relation(fields: [recipeId], references: [id])
-  recipeId  Int
+  recipe   Recipe @relation(fields: [recipeId], references: [id])
+  recipeId Int
 
-  stock     Stock  @relation(fields: [stockId], references: [id])
-  stockId   Int
+  stock    Stock  @relation(fields: [stockId], references: [id])
+  stockId  Int
 
-  amount    Int
+  amount   Int
 }
 
+model Player {
+  id         Int    @id @default(autoincrement())
+  userId     String @unique
+  ingameName String
+}
 

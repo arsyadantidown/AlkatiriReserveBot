@@ -4,17 +4,94 @@ const {
   GatewayIntentBits,
   SlashCommandBuilder,
   REST,
-  Routes
+  Routes,
+  EmbedBuilder
 } = require("discord.js");
 const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds]
+  intents: [
+    GatewayIntentBits.Guilds
+  ]
 });
 
+async function sendLog(message) {
+  try {
+    const logChannel = await client.channels.fetch(process.env.LOG_CHANNEL_ID);
+    if (!logChannel) return;
+    await logChannel.send({ embeds: [message] });
+  } catch (err) {
+    console.error("Log error:", err);
+  }
+}
+
+async function generateStockMessage() {
+  const stocks = await prisma.stock.findMany({
+    orderBy: { name: "asc" }
+  });
+
+  if (stocks.length === 0) return "Stock kosong.";
+
+  let message = "```\n";
+  message += "STOCK BAHAN SAAT INI: \n\n";
+
+    stocks.forEach(s => {
+
+    const percent = s.maxStock > 0 
+  ? s.quantity / s.maxStock 
+  : 0;
+
+      let indicator;
+
+      if (s.quantity === 0) {
+        indicator = "🟥"; 
+      } else if (percent < 0.5) {
+        indicator = "🟨"; 
+      } else {
+        indicator = "🟩"; 
+      }
+
+
+    const nameFormatted =
+      s.name.charAt(0).toUpperCase() +
+      s.name.slice(1);
+
+    const paddedName = nameFormatted.padEnd(13, " ");
+
+    message += `${paddedName} | ${s.quantity}/${s.maxStock} ${indicator}\n`;
+  });
+
+  message += "```";
+
+  return message;
+}
+
+async function sendStockToChannel() {
+  try {
+    const channel = await client.channels.fetch(process.env.STOCK_CHANNEL_ID);
+    if (!channel) return;
+
+    const stockMessage = await generateStockMessage();
+    await channel.send(stockMessage);
+
+  } catch (err) {
+    console.error("Stock channel error:", err);
+  }
+}
+
 const commands = [
+
+  // ================= REGISTER =================
+  new SlashCommandBuilder()
+    .setName("register")
+    .setDescription("Daftarkan nama in-game")
+    .addStringOption(option =>
+      option.setName("nama")
+        .setDescription("Nama in-game")
+        .setRequired(true)
+    ),
 
   new SlashCommandBuilder()
     .setName("duty_start")
@@ -45,10 +122,6 @@ const commands = [
         .setDescription("Jumlah paket")
         .setRequired(true)
     ),
-
-  new SlashCommandBuilder()
-    .setName("stock_view")
-    .setDescription("Lihat stock bahan"),
 
   new SlashCommandBuilder()
     .setName("stock_update")
@@ -108,23 +181,6 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
   console.log("Slash commands registered.");
 })();
 
-const hargaBahan = {
-  "tepung": 350,
-  "beras": 300,
-  "teh": 350,
-  "gula": 300,
-  "susu": 250,
-  "garam": 300,
-  "ayam kemasan": 250,
-  "daging": 300,
-  "coklat": 350,
-  "strawberry": 350,
-  "soda": 300,
-  "air": 300,
-  "es batu": 300,
-  "cabai": 300
-};
-
 const paketMapping = {
   "paket a": ["Creamy Mushroom Pasta", "Sparkling Water"],
   "paket b": ["Butter Chicken Rice", "Jasmine Tea"],
@@ -139,9 +195,39 @@ client.on("interactionCreate", async interaction => {
 
   const userId = interaction.user.id;
 
+  // Ambil data player
+  const player = await prisma.player.findUnique({
+    where: { userId }
+  });
+
+  const username = player
+    ? player.ingameName
+    : interaction.user.tag;
+
   try {
 
+    // ================= REGISTER =================
+    if (interaction.commandName === "register") {
+
+      const nama = interaction.options.getString("nama");
+
+      await prisma.player.upsert({
+        where: { userId },
+        update: { ingameName: nama },
+        create: { userId, ingameName: nama }
+      });
+
+      return interaction.reply({
+        content: `✅ Nama in-game diset ke ${nama}`,
+        ephemeral: true
+      });
+    }
+
+    // ================= DUTY START =================
     if (interaction.commandName === "duty_start") {
+
+      if (!player)
+        return interaction.reply({ content: "Register dulu pakai /register", ephemeral: true });
 
       const active = await prisma.dutySession.findFirst({
         where: { userId, endTime: null }
@@ -154,9 +240,18 @@ client.on("interactionCreate", async interaction => {
         data: { userId, startTime: new Date() }
       });
 
-      return interaction.reply("Duty dimulai!");
+      await interaction.reply("Duty dimulai!");
+
+      const embed = new EmbedBuilder()
+        .setTitle("🟢 DUTY START")
+        .addFields({ name: "User", value: username })
+        .setTimestamp()
+        .setColor("Green");
+
+      await sendLog(embed);
     }
 
+    // ================= DUTY END =================
     if (interaction.commandName === "duty_end") {
 
       const active = await prisma.dutySession.findFirst({
@@ -174,7 +269,18 @@ client.on("interactionCreate", async interaction => {
         data: { endTime, duration }
       });
 
-      return interaction.reply(`Duty selesai. Total: ${duration} menit.`);
+      await interaction.reply(`Duty selesai. Total: ${duration} menit.`);
+
+      const embed = new EmbedBuilder()
+        .setTitle("🔴 DUTY END")
+        .addFields(
+          { name: "User", value: username },
+          { name: "Durasi", value: `${duration} menit` }
+        )
+        .setTimestamp()
+        .setColor("Red");
+
+      await sendLog(embed);
     }
 
     if (interaction.commandName === "masak") {
@@ -202,7 +308,6 @@ client.on("interactionCreate", async interaction => {
 
       for (const recipe of recipes) {
         for (const item of recipe.ingredients) {
-
           const needed = item.amount * jumlahInput;
 
           if (item.stock.quantity < needed)
@@ -213,7 +318,8 @@ client.on("interactionCreate", async interaction => {
         }
       }
 
-      let stockUsage = {};
+      let foodUsage = {};
+      let drinkUsage = {};
 
       await prisma.$transaction(async tx => {
 
@@ -227,76 +333,131 @@ client.on("interactionCreate", async interaction => {
               data: { quantity: { decrement: needed } }
             });
 
-            if (!stockUsage[item.stock.name]) {
-              stockUsage[item.stock.name] = 0;
+            if (recipe.category === "food") {
+              if (!foodUsage[item.stock.name]) foodUsage[item.stock.name] = 0;
+              foodUsage[item.stock.name] += needed;
             }
 
-            stockUsage[item.stock.name] += needed;
+            if (recipe.category === "drink") {
+              if (!drinkUsage[item.stock.name]) drinkUsage[item.stock.name] = 0;
+              drinkUsage[item.stock.name] += needed;
+            }
           }
         }
 
       });
 
-      const usageText = Object.entries(stockUsage)
-        .map(([name, qty]) => `• ${name} -${qty}`)
-        .join("\n");
+      const isiPaket = menuList.map(menu => `• ${menu}`).join("\n");
 
-      return interaction.reply(
-        `🔥 **BERHASIL MASAK** 🔥\n\n` +
-        `📦 Paket : ${menuName}\n` +
-        `🍽 Jumlah : ${jumlahInput}x\n\n` +
-        `📉 **Stock Berkurang:**\n${usageText}`
-      );
+    let foodText = "";
+    let drinkText = "";
+
+    for (const [name, qty] of Object.entries(foodUsage)) {
+      foodText += `• ${name} : ${qty}\n`;
     }
 
-    if (interaction.commandName === "stock_view") {
-
-      const stocks = await prisma.stock.findMany({
-        orderBy: { name: "asc" }
-      });
-
-      if (stocks.length === 0)
-        return interaction.reply("Belum ada stock.");
-
-      const longestName = Math.max(...stocks.map(s => s.name.length));
-
-      let message = "STOCK BAHAN\n\n";
-
-      stocks.forEach(s => {
-        const status = s.quantity >= s.maxStock ? "🟥" : "🟩";
-        const name = s.name.padEnd(longestName, " ");
-        message += `${name} | ${s.quantity}/${s.maxStock} ${status}\n`;
-      });
-
-      return interaction.reply(`\`\`\`\n${message}\`\`\``);
+    for (const [name, qty] of Object.entries(drinkUsage)) {
+      drinkText += `• ${name} : ${qty}\n`;
     }
 
-    if (interaction.commandName === "stock_update") {
+    if (!foodText) foodText = "-";
+    if (!drinkText) drinkText = "-";
 
-      const bahan = interaction.options.getString("bahan");
-      const action = interaction.options.getString("action");
-      const jumlah = interaction.options.getInteger("jumlah");
+    await interaction.reply(
+      `🔥 **BERHASIL MASAK** 🔥\n\n` +
+      `📦 Paket : ${menuName}\n` +
+      `📋 **Isi Paket:**\n${isiPaket}\n\n` +
+      `🍽 Jumlah : ${jumlahInput}x\n\n` +
+      `🍗 **Bahan Makanan Terpakai:**\n${foodText}\n` +
+      `🥤 **Bahan Minuman Terpakai:**\n${drinkText}`
+    );
 
-      const stock = await prisma.stock.findFirst({
-        where: { name: { equals: bahan, mode: "insensitive" } }
-      });
+      const embed = new EmbedBuilder()
+        .setTitle("🍳 MASAK")
+        .addFields(
+          { name: "User", value: username },
+          { name: "Paket", value: menuName },
+          { name: "Jumlah", value: `${jumlahInput}x` }
+        )
+        .setTimestamp()
+        .setColor("Blue");
 
-      if (!stock)
-        return interaction.reply({ content: "Bahan tidak ditemukan.", ephemeral: true });
-
-      let newQuantity = stock.quantity;
-
-      if (action === "add") newQuantity += jumlah;
-      if (action === "remove") newQuantity = Math.max(0, newQuantity - jumlah);
-      if (action === "set") newQuantity = Math.max(0, jumlah);
-
-      await prisma.stock.update({
-        where: { id: stock.id },
-        data: { quantity: newQuantity }
-      });
-
-      return interaction.reply(`Stock ${stock.name} sekarang ${newQuantity}.`);
+      await sendLog(embed);
+      await sendStockToChannel();
     }
+
+if (interaction.commandName === "stock_update") {
+
+  const bahanInput = interaction.options.getString("bahan");
+  const action = interaction.options.getString("action");
+  const jumlah = interaction.options.getInteger("jumlah");
+
+  if (!bahanInput || !action || jumlah === null) {
+    return interaction.reply({
+      content: "Parameter tidak lengkap.",
+      ephemeral: true
+    });
+  }
+
+  // 🔎 Cari bahan (case insensitive)
+  const stock = await prisma.stock.findFirst({
+    where: {
+      name: {
+        equals: bahanInput,
+        mode: "insensitive"
+      }
+    }
+  });
+
+  if (!stock) {
+    return interaction.reply({
+      content: "Bahan tidak ditemukan.",
+      ephemeral: true
+    });
+  }
+
+  let newQty = stock.quantity;
+
+  if (action === "add") newQty += jumlah;
+  if (action === "remove") newQty -= jumlah;
+  if (action === "set") newQty = jumlah;
+
+  if (newQty < 0) {
+    return interaction.reply({
+      content: "Stock tidak boleh minus.",
+      ephemeral: true
+    });
+  }
+
+  // 💾 Update database
+  await prisma.stock.update({
+    where: { id: stock.id },
+    data: { quantity: newQty }
+  });
+
+  // 🔔 Reply ke user
+  await interaction.reply(
+    `📦 Stock **${stock.name}** sekarang: ${newQty}`
+  );
+
+  const username = interaction.user.username;
+
+  // 📜 Log Embed
+  const embed = new EmbedBuilder()
+    .setTitle("📦 STOCK UPDATE")
+    .addFields(
+      { name: "User", value: username },
+      { name: "Bahan", value: stock.name },
+      { name: "Action", value: action },
+      { name: "Jumlah", value: `${jumlah}` },
+      { name: "Stock Sekarang", value: `${newQty}` }
+    )
+    .setTimestamp()
+    .setColor("Orange");
+
+  await sendLog(embed);
+  await sendStockToChannel();
+}
 
     if (interaction.commandName === "belanja") {
 
@@ -304,21 +465,23 @@ client.on("interactionCreate", async interaction => {
       const jumlah = interaction.options.getInteger("jumlah");
       const deskripsi = interaction.options.getString("deskripsi") || "-";
 
-      const bahanKey = bahanInput.toLowerCase();
-
-      if (!hargaBahan[bahanKey])
-        return interaction.reply({ content: "Harga bahan tidak ditemukan.", ephemeral: true });
-
-      const hargaPerPcs = hargaBahan[bahanKey];
-      const totalHarga = hargaPerPcs * jumlah;
-
       const stock = await prisma.stock.findFirst({
-        where: { name: { equals: bahanInput, mode: "insensitive" } }
+        where: {
+          name: {
+            equals: bahanInput,
+            mode: "insensitive"
+          }
+        }
       });
 
       if (!stock)
-        return interaction.reply({ content: "Bahan tidak ditemukan di database.", ephemeral: true });
+        return interaction.reply({
+          content: "Bahan tidak ditemukan di database.",
+          flags: 64
+        });
 
+      const hargaPerPcs = stock.price;
+      const totalHarga = hargaPerPcs * jumlah;
       const newQuantity = stock.quantity + jumlah;
 
       await prisma.stock.update({
@@ -326,7 +489,7 @@ client.on("interactionCreate", async interaction => {
         data: { quantity: newQuantity }
       });
 
-      return interaction.reply(
+      await interaction.reply(
         `🛒 **BELANJA BERHASIL**\n\n` +
         `📦 Bahan      : ${stock.name}\n` +
         `📊 Jumlah     : +${jumlah}\n` +
@@ -335,6 +498,20 @@ client.on("interactionCreate", async interaction => {
         `📝 Deskripsi  : ${deskripsi}\n\n` +
         `📈 Stock Sekarang : ${newQuantity}`
       );
+
+      const embed = new EmbedBuilder()
+        .setTitle("🛒 BELANJA")
+        .addFields(
+          { name: "User", value: username },
+          { name: "Bahan", value: stock.name },
+          { name: "Jumlah", value: `+${jumlah}` },
+          { name: "Total", value: `${totalHarga}` }
+        )
+        .setTimestamp()
+        .setColor("Purple");
+
+      await sendLog(embed);
+      await sendStockToChannel();
     }
 
   } catch (err) {
