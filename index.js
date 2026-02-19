@@ -234,9 +234,11 @@ if (interaction.commandName === "duty_start") {
   });
 
   const jamMulai = startTime.toLocaleTimeString("id-ID", {
+    timeZone: "Asia/Jakarta",
     hour: "2-digit",
     minute: "2-digit"
   });
+
 
   await interaction.reply(`🟢 Duty dimulai jam ${jamMulai}`);
 
@@ -282,10 +284,11 @@ if (interaction.commandName === "duty_end") {
     minute: "2-digit"
   });
 
-  const jamSelesai = endTime.toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
+const jamSelesai = endTime.toLocaleTimeString("id-ID", {
+  timeZone: "Asia/Jakarta",
+  hour: "2-digit",
+  minute: "2-digit"
+});
 
   await interaction.reply(
     `🔴 Duty selesai!\n\n` +
