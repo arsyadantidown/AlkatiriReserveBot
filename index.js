@@ -147,19 +147,19 @@ const commands = [
         .setRequired(true)
     ),
 
-  new SlashCommandBuilder()
-    .setName("belanja")
-    .setDescription("Beli bahan dan tambah stock")
-    .addStringOption(option =>
-      option.setName("bahan")
-        .setDescription("Nama bahan")
-        .setRequired(true)
-    )
-    .addIntegerOption(option =>
-      option.setName("jumlah")
-        .setDescription("Jumlah beli")
-        .setRequired(true)
-    )
+new SlashCommandBuilder()
+  .setName("belanja")
+  .setDescription("Beli beberapa bahan sekaligus")
+  .addStringOption(option =>
+    option.setName("items")
+      .setDescription("Format: nama1:jumlah, nama2:jumlah")
+      .setRequired(true)
+  )
+  .addStringOption(option =>
+    option.setName("deskripsi")
+      .setDescription("Deskripsi pembelian")
+      .setRequired(true)
+  )
     .addStringOption(option =>
       option.setName("deskripsi")
         .setDescription("Deskripsi pembelian (opsional)")
