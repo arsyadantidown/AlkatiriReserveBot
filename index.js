@@ -83,7 +83,6 @@ async function sendStockToChannel() {
 
 const commands = [
 
-  // ================= REGISTER =================
   new SlashCommandBuilder()
     .setName("register")
     .setDescription("Daftarkan nama in-game")
@@ -190,7 +189,6 @@ client.on("interactionCreate", async interaction => {
 
   const userId = interaction.user.id;
 
-  // Ambil data player
   const player = await prisma.player.findUnique({
     where: { userId }
   });
@@ -201,7 +199,6 @@ client.on("interactionCreate", async interaction => {
 
   try {
 
-    // ================= REGISTER =================
     if (interaction.commandName === "register") {
 
       const nama = interaction.options.getString("nama");
@@ -218,65 +215,99 @@ client.on("interactionCreate", async interaction => {
       });
     }
 
-    // ================= DUTY START =================
-    if (interaction.commandName === "duty_start") {
+if (interaction.commandName === "duty_start") {
 
-      if (!player)
-        return interaction.reply({ content: "Register dulu pakai /register", ephemeral: true });
+  if (!player)
+    return interaction.reply({ content: "Register dulu pakai /register", ephemeral: true });
 
-      const active = await prisma.dutySession.findFirst({
-        where: { userId, endTime: null }
-      });
+  const active = await prisma.dutySession.findFirst({
+    where: { userId, endTime: null }
+  });
 
-      if (active)
-        return interaction.reply({ content: "Kamu masih duty!", ephemeral: true });
+  if (active)
+    return interaction.reply({ content: "Kamu masih duty!", ephemeral: true });
 
-      await prisma.dutySession.create({
-        data: { userId, startTime: new Date() }
-      });
+  const startTime = new Date();
 
-      await interaction.reply("Duty dimulai!");
+  await prisma.dutySession.create({
+    data: { userId, startTime }
+  });
 
-      const embed = new EmbedBuilder()
-        .setTitle("🟢 DUTY START")
-        .addFields({ name: "User", value: username })
-        .setTimestamp()
-        .setColor("Green");
+  const jamMulai = startTime.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 
-      await sendLog(embed);
+  await interaction.reply(`🟢 Duty dimulai jam ${jamMulai}`);
+
+  const embed = new EmbedBuilder()
+    .setTitle("🟢 DUTY START")
+    .addFields(
+      { name: "User", value: username },
+      { name: "Jam Mulai", value: jamMulai }
+    )
+    .setTimestamp()
+    .setColor("Green");
+
+  await sendLog(embed);
+}
+
+if (interaction.commandName === "duty_end") {
+
+  const active = await prisma.dutySession.findFirst({
+    where: { userId, endTime: null }
+  });
+
+  if (!active)
+    return interaction.reply({ content: "Kamu belum mulai duty.", ephemeral: true });
+
+  const endTime = new Date();
+
+  const totalMs = endTime - active.startTime;
+
+  const totalMenit = Math.floor(totalMs / 60000);
+  const jam = Math.floor(totalMenit / 60);
+  const menit = totalMenit % 60;
+
+  await prisma.dutySession.update({
+    where: { id: active.id },
+    data: {
+      endTime,
+      duration: totalMenit
     }
+  });
 
-    // ================= DUTY END =================
-    if (interaction.commandName === "duty_end") {
+  const jamMulai = active.startTime.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 
-      const active = await prisma.dutySession.findFirst({
-        where: { userId, endTime: null }
-      });
+  const jamSelesai = endTime.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 
-      if (!active)
-        return interaction.reply({ content: "Kamu belum mulai duty.", ephemeral: true });
+  await interaction.reply(
+    `🔴 Duty selesai!\n\n` +
+    `🕒 Mulai : ${jamMulai}\n` +
+    `🕒 Selesai : ${jamSelesai}\n` +
+    `⏱ Total : ${jam} jam ${menit} menit`
+  );
 
-      const endTime = new Date();
-      const duration = Math.floor((endTime - active.startTime) / 60000);
+  const embed = new EmbedBuilder()
+    .setTitle("🔴 DUTY END")
+    .addFields(
+      { name: "User", value: username },
+      { name: "Jam Mulai", value: jamMulai },
+      { name: "Jam Selesai", value: jamSelesai },
+      { name: "Total Duty", value: `${jam} jam ${menit} menit` }
+    )
+    .setTimestamp()
+    .setColor("Red");
 
-      await prisma.dutySession.update({
-        where: { id: active.id },
-        data: { endTime, duration }
-      });
+  await sendLog(embed);
+}
 
-      await interaction.reply(`Duty selesai. Total: ${duration} menit.`);
-
-      const embed = new EmbedBuilder()
-        .setTitle("🔴 DUTY END")
-        .addFields(
-          { name: "User", value: username },
-          { name: "Durasi", value: `${duration} menit` }
-        )
-        .setTimestamp()
-        .setColor("Red");
-
-      await sendLog(embed);
-    }
 
     if (interaction.commandName === "masak") {
 
@@ -394,7 +425,6 @@ if (interaction.commandName === "stock_update") {
     });
   }
 
-  // 🔎 Cari bahan (case insensitive)
   const stock = await prisma.stock.findFirst({
     where: {
       name: {
@@ -424,20 +454,17 @@ if (interaction.commandName === "stock_update") {
     });
   }
 
-  // 💾 Update database
   await prisma.stock.update({
     where: { id: stock.id },
     data: { quantity: newQty }
   });
 
-  // 🔔 Reply ke user
   await interaction.reply(
     `📦 Stock **${stock.name}** sekarang: ${newQty}`
   );
 
   const username = interaction.user.username;
 
-  // 📜 Log Embed
   const embed = new EmbedBuilder()
     .setTitle("📦 STOCK UPDATE")
     .addFields(
@@ -459,7 +486,6 @@ if (interaction.commandName === "belanja") {
   const itemsInput = interaction.options.getString("items");
   const deskripsi = interaction.options.getString("deskripsi");
 
-  // Format parsing: nama1:jumlah, nama2:jumlah
   const itemsArray = itemsInput.split(",");
 
   let totalSemua = 0;
@@ -541,6 +567,4 @@ if (interaction.commandName === "belanja") {
 
 });
 
-console.log("TOKEN TYPE:", typeof process.env.DISCORD_TOKEN);
-console.log("TOKEN VALUE:", process.env.DISCORD_TOKEN);
 client.login(process.env.DISCORD_TOKEN);
