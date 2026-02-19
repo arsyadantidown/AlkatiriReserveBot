@@ -160,11 +160,6 @@ new SlashCommandBuilder()
       .setDescription("Deskripsi pembelian")
       .setRequired(true)
   )
-    .addStringOption(option =>
-      option.setName("deskripsi")
-        .setDescription("Deskripsi pembelian (opsional)")
-        .setRequired(true)
-    )
 
 ].map(cmd => cmd.toJSON());
 
