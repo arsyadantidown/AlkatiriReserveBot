@@ -228,100 +228,85 @@ client.on("interactionCreate", async interaction => {
 
 if (interaction.commandName === "duty_start") {
 
-  if (!player)
-    return interaction.reply({ content: "Register dulu pakai /register", ephemeral: true });
+      if (!player)
+        return interaction.reply({ content: "Register dulu pakai /register", ephemeral: true });
 
-  const active = await prisma.dutySession.findFirst({
-    where: { userId, endTime: null }
-  });
+      const active = await prisma.dutySession.findFirst({
+        where: { userId, endTime: null }
+      });
 
-  if (active)
-    return interaction.reply({ content: "Kamu masih duty!", ephemeral: true });
+      if (active)
+        return interaction.reply({ content: "Kamu masih duty!", ephemeral: true });
 
-  const startTime = new Date();
+      const startTime = new Date();
 
-  await prisma.dutySession.create({
-    data: { userId, startTime }
-  });
+      await prisma.dutySession.create({
+        data: { userId, startTime }
+      });
 
-const jamMulai = startTime.toLocaleTimeString("id-ID", {
-  timeZone: "Asia/Jakarta",
-  hour: "2-digit",
-  minute: "2-digit"
-});
+      const jamMulai = formatWIBFull(startTime);
 
-  await interaction.reply(`🟢 Duty dimulai jam ${jamMulai}`);
+      await interaction.reply(`🟢 Duty dimulai jam ${jamMulai}`);
 
-  const embed = new EmbedBuilder()
-    .setTitle("🟢 DUTY START")
-    .addFields(
-      { name: "User", value: username },
-      { name: "Jam Mulai", value: jamMulai }
-    )
-    .setTimestamp()
-    .setColor("Green");
+      const embed = new EmbedBuilder()
+        .setTitle("🟢 DUTY START")
+        .addFields(
+          { name: "User", value: username },
+          { name: "Jam Mulai", value: jamMulai }
+        )
+        .setTimestamp()
+        .setColor("Green");
 
-  await sendLog(embed);
-}
-
-if (interaction.commandName === "duty_end") {
-
-  const active = await prisma.dutySession.findFirst({
-    where: { userId, endTime: null }
-  });
-
-  if (!active)
-    return interaction.reply({ content: "Kamu belum mulai duty.", ephemeral: true });
-
-  const endTime = new Date();
-
-  const totalMs = endTime - active.startTime;
-
-  const totalMenit = Math.floor(totalMs / 60000);
-  const jam = Math.floor(totalMenit / 60);
-  const menit = totalMenit % 60;
-
-  await prisma.dutySession.update({
-    where: { id: active.id },
-    data: {
-      endTime,
-      duration: totalMenit
+      await sendLog(embed);
     }
-  });
 
-const jamSelesai = endTime.toLocaleTimeString("id-ID", {
-  timeZone: "Asia/Jakarta",
-  hour: "2-digit",
-  minute: "2-digit"
-});
+ if (interaction.commandName === "duty_end") {
 
-const jamMulai = startTime.toLocaleTimeString("id-ID", {
-  timeZone: "Asia/Jakarta",
-  hour: "2-digit",
-  minute: "2-digit"
-});
+      const active = await prisma.dutySession.findFirst({
+        where: { userId, endTime: null }
+      });
 
-  await interaction.reply(
-    `🔴 Duty selesai!\n\n` +
-    `🕒 Mulai : ${jamMulai}\n` +
-    `🕒 Selesai : ${jamSelesai}\n` +
-    `⏱ Total : ${jam} jam ${menit} menit`
-  );
+      if (!active)
+        return interaction.reply({ content: "Kamu belum mulai duty.", ephemeral: true });
 
-  const embed = new EmbedBuilder()
-    .setTitle("🔴 DUTY END")
-    .addFields(
-      { name: "User", value: username },
-      { name: "Jam Mulai", value: jamMulai },
-      { name: "Jam Selesai", value: jamSelesai },
-      { name: "Total Duty", value: `${jam} jam ${menit} menit` }
-    )
-    .setTimestamp()
-    .setColor("Red");
+      const endTime = new Date();
 
-  await sendLog(embed);
-}
+      const totalMs = endTime - active.startTime;
+      const totalMenit = Math.floor(totalMs / 60000);
+      const jam = Math.floor(totalMenit / 60);
+      const menit = totalMenit % 60;
 
+      await prisma.dutySession.update({
+        where: { id: active.id },
+        data: {
+          endTime,
+          duration: totalMenit
+        }
+      });
+
+      const jamMulai = formatWIBFull(active.startTime);
+      const jamSelesai = formatWIBFull(endTime);
+
+      await interaction.reply(
+        `🔴 Duty selesai!\n\n` +
+        `🕒 Mulai : ${jamMulai}\n` +
+        `🕒 Selesai : ${jamSelesai}\n` +
+        `⏱ Total : ${jam} jam ${menit} menit`
+      );
+
+      const embed = new EmbedBuilder()
+        .setTitle("🔴 DUTY END")
+        .addFields(
+          { name: "User", value: username },
+          { name: "Jam Mulai", value: jamMulai },
+          { name: "Jam Selesai", value: jamSelesai },
+          { name: "Total Duty", value: `${jam} jam ${menit} menit` }
+        )
+        .setTimestamp()
+        .setColor("Red");
+
+      await sendLog(embed);
+    }
 
     if (interaction.commandName === "masak") {
 
