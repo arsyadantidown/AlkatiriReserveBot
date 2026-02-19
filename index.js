@@ -522,4 +522,6 @@ if (interaction.commandName === "stock_update") {
 
 });
 
+console.log("TOKEN TYPE:", typeof process.env.DISCORD_TOKEN);
+console.log("TOKEN VALUE:", process.env.DISCORD_TOKEN);
 client.login(process.env.DISCORD_TOKEN);
