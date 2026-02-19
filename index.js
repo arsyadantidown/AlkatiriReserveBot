@@ -570,4 +570,5 @@ if (interaction.commandName === "belanja") {
 
 });
 
+console.log("Server time sekarang:", new Date());
 client.login(process.env.DISCORD_TOKEN);
