@@ -81,6 +81,17 @@ async function sendStockToChannel() {
   }
 }
 
+function formatWIBFull(date) {
+  return new Date(date).toLocaleString("id-ID", {
+    timeZone: "Asia/Jakarta",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }) + " WIB";
+}
+
 const commands = [
 
   new SlashCommandBuilder()
@@ -233,12 +244,11 @@ if (interaction.commandName === "duty_start") {
     data: { userId, startTime }
   });
 
-  const jamMulai = startTime.toLocaleTimeString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-
+const jamMulai = startTime.toLocaleTimeString("id-ID", {
+  timeZone: "Asia/Jakarta",
+  hour: "2-digit",
+  minute: "2-digit"
+});
 
   await interaction.reply(`🟢 Duty dimulai jam ${jamMulai}`);
 
@@ -279,12 +289,13 @@ if (interaction.commandName === "duty_end") {
     }
   });
 
-  const jamMulai = active.startTime.toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit"
-  });
-
 const jamSelesai = endTime.toLocaleTimeString("id-ID", {
+  timeZone: "Asia/Jakarta",
+  hour: "2-digit",
+  minute: "2-digit"
+});
+
+const jamMulai = startTime.toLocaleTimeString("id-ID", {
   timeZone: "Asia/Jakarta",
   hour: "2-digit",
   minute: "2-digit"
