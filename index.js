@@ -246,7 +246,7 @@ if (interaction.commandName === "duty_start") {
 
       const jamMulai = formatWIBFull(startTime);
 
-      await interaction.reply(`🟢 Duty dimulai jam ${jamMulai}`);
+      await interaction.reply(`🟢 Duty dimulai pada ${jamMulai}`);
 
       const embed = new EmbedBuilder()
         .setTitle("🟢 DUTY START")
