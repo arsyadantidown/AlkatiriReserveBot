@@ -35,23 +35,37 @@ async function generateStockMessage() {
   if (stocks.length === 0) return "Stock kosong.";
 
   let message = "```\n";
-  message += "STOCK BAHAN SAAT INI: \n\n";
+  message += "Stock-harga bahan baku resto saat ini:\n\n";
 
-    stocks.forEach(s => {
+  stocks.forEach(s => {
 
-    const percent = s.maxStock > 0 
-  ? s.quantity / s.maxStock 
-  : 0;
+    const percent = s.maxStock > 0
+      ? s.quantity / s.maxStock
+      : 0;
 
-      let indicator;
+    let indicator;
 
-      if (s.quantity === 0) {
-        indicator = "🟥"; 
-      } else if (percent < 0.5) {
-        indicator = "🟨"; 
-      } else {
-        indicator = "🟩"; 
-      }
+    if (s.quantity === 0) {
+      indicator = "🟥";
+    } else if (percent < 0.5) {
+      indicator = "🟨";
+    } else {
+      indicator = "🟩";
+    }
+
+    const nameFormatted =
+      s.name.charAt(0).toUpperCase() +
+      s.name.slice(1);
+
+    const paddedName = nameFormatted.padEnd(13, " ");
+
+    message += `${paddedName} : ${s.price} - ${indicator} (${s.quantity}/${s.maxStock})\n`;
+  });
+
+  message += "```";
+
+  return message;
+}
 
 
     const nameFormatted =
