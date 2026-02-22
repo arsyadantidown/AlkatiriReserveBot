@@ -59,21 +59,7 @@ async function generateStockMessage() {
 
     const paddedName = nameFormatted.padEnd(13, " ");
 
-    message += `${paddedName} | ${s.quantity}/${s.maxStock} ${indicator}\n`;
-  });
-
-  message += "```";
-
-  return message;
-}
-
-    const nameFormatted =
-      s.name.charAt(0).toUpperCase() +
-      s.name.slice(1);
-
-    const paddedName = nameFormatted.padEnd(13, " ");
-
-    message += `${paddedName} | ${s.quantity}/${s.maxStock} ${indicator}\n`;
+    message += `${paddedName} : ${s.price} - ${indicator} (${s.quantity}/${s.maxStock})\n`;
   });
 
   message += "```";
