@@ -35,7 +35,7 @@ async function generateStockMessage() {
   if (stocks.length === 0) return "Stock kosong.";
 
   let message = "```\n";
-  message += "Stock-harga bahan baku resto saat ini:\n\n";
+  message += "Harga - Stock kebutuhan bahan resto saat ini:\n\n";
 
   stocks.forEach(s => {
 
