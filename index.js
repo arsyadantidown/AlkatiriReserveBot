@@ -45,7 +45,7 @@ async function generateStockMessage() {
 
     let indicator;
 
-    if (s.quantity === 0) {
+    if (s.quantity > s.maxStock) {
       indicator = "🟥";
     } else if (percent < 0.5) {
       indicator = "🟨";
