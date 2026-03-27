@@ -35,23 +35,24 @@ async function generateStockMessage() {
   if (stocks.length === 0) return "Stock kosong.";
 
   let message = "```\n";
-  message += "Harga - Stock kebutuhan bahan resto saat ini:\n\n";
+  message += "STOCK BAHAN SAAT INI: \n\n";
 
-  stocks.forEach(s => {
+    stocks.forEach(s => {
 
-    const percent = s.maxStock > 0
-      ? s.quantity / s.maxStock
-      : 0;
+    const percent = s.maxStock > 0 
+  ? s.quantity / s.maxStock 
+  : 0;
 
-    let indicator;
+      let indicator;
 
-    if (s.quantity > s.maxStock) {
-      indicator = "🟥";
-    } else if (percent < 0.5) {
-      indicator = "🟨";
-    } else {
-      indicator = "🟩";
-    }
+      if (s.quantity === 0) {
+        indicator = "🟥"; 
+      } else if (percent < 0.5) {
+        indicator = "🟨"; 
+      } else {
+        indicator = "🟩"; 
+      }
+
 
     const nameFormatted =
       s.name.charAt(0).toUpperCase() +
@@ -59,7 +60,7 @@ async function generateStockMessage() {
 
     const paddedName = nameFormatted.padEnd(13, " ");
 
-    message += `${paddedName} : ${s.price} - ${indicator} (${s.quantity}/${s.maxStock})\n`;
+    message += `${paddedName} | ${s.quantity}/${s.maxStock} ${indicator}\n`;
   });
 
   message += "```";
@@ -80,19 +81,9 @@ async function sendStockToChannel() {
   }
 }
 
-function formatWIBFull(date) {
-  return new Date(date).toLocaleString("id-ID", {
-    timeZone: "Asia/Jakarta",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  }) + " WIB";
-}
-
 const commands = [
 
+  // ================= REGISTER =================
   new SlashCommandBuilder()
     .setName("register")
     .setDescription("Daftarkan nama in-game")
@@ -118,12 +109,12 @@ const commands = [
         .setDescription("Pilih menu atau paket")
         .setRequired(true)
         .addChoices(
-          { name: "Paket A", value: "paket a" },
-          { name: "Paket B", value: "paket b" },
-          { name: "Paket C", value: "paket c" },
-          { name: "Paket D", value: "paket d" },
-          { name: "Paket Dessert A", value: "paket dessert a" },
-          { name: "Paket Dessert B", value: "paket dessert b" }
+          { name: "Dinein A", value: "dinein a" },
+          { name: "Dinein B", value: "dinein b" },
+          { name: "Takeaway A", value: "takeaway a" },
+          { name: "Takeaway B", value: "takeaway b" },
+          { name: "Dessert A", value: "dessert a" },
+          { name: "Dessert B", value: "dessert b" }
         )
     )
     .addIntegerOption(option =>
@@ -156,19 +147,24 @@ const commands = [
         .setRequired(true)
     ),
 
-new SlashCommandBuilder()
-  .setName("belanja")
-  .setDescription("Beli beberapa bahan sekaligus")
-  .addStringOption(option =>
-    option.setName("items")
-      .setDescription("Format: nama1:jumlah, nama2:jumlah")
-      .setRequired(true)
-  )
-  .addStringOption(option =>
-    option.setName("deskripsi")
-      .setDescription("Deskripsi pembelian")
-      .setRequired(true)
-  )
+  new SlashCommandBuilder()
+    .setName("belanja")
+    .setDescription("Beli bahan dan tambah stock")
+    .addStringOption(option =>
+      option.setName("bahan")
+        .setDescription("Nama bahan")
+        .setRequired(true)
+    )
+    .addIntegerOption(option =>
+      option.setName("jumlah")
+        .setDescription("Jumlah beli")
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option.setName("deskripsi")
+        .setDescription("Deskripsi pembelian (opsional)")
+        .setRequired(false)
+    )
 
 ].map(cmd => cmd.toJSON());
 
@@ -186,12 +182,12 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 })();
 
 const paketMapping = {
-  "paket a": ["Creamy Mushroom Pasta", "Sparkling Water"],
-  "paket b": ["Butter Chicken Rice", "Jasmine Tea"],
-  "paket c": ["Roasted Chicken Provencale", "Sparkling Water"],
-  "paket d": ["Chicken Cordon Blue", "Iced Lemon Tea"],
-  "paket dessert a": ["Tiramisu", "Iced Chocolate"],
-  "paket dessert b": ["Cheese Quiche", "Strawberry Infused Water"]
+  "dinein a": ["Creamy Mushroom Pasta", "Sparkling Water A"],
+  "dinein b": ["Butter Chicken Rice", "Jasmine Tea"],
+  "takeaway a": ["Pepper Crusted Portobello Steak", "Sparkling Water B"],
+  "takeaway b": ["Chicken Cordon Blue", "Iced Lemon Tea"],
+  "dessert a": ["Tiramisu", "Iced Chocolate"],
+  "dessert b": ["Cheese Quiche", "Strawberry Infused Water"]
 };
 
 client.on("interactionCreate", async interaction => {
@@ -199,6 +195,7 @@ client.on("interactionCreate", async interaction => {
 
   const userId = interaction.user.id;
 
+  // Ambil data player
   const player = await prisma.player.findUnique({
     where: { userId }
   });
@@ -209,6 +206,7 @@ client.on("interactionCreate", async interaction => {
 
   try {
 
+    // ================= REGISTER =================
     if (interaction.commandName === "register") {
 
       const nama = interaction.options.getString("nama");
@@ -225,7 +223,8 @@ client.on("interactionCreate", async interaction => {
       });
     }
 
-if (interaction.commandName === "duty_start") {
+    // ================= DUTY START =================
+    if (interaction.commandName === "duty_start") {
 
       if (!player)
         return interaction.reply({ content: "Register dulu pakai /register", ephemeral: true });
@@ -237,29 +236,23 @@ if (interaction.commandName === "duty_start") {
       if (active)
         return interaction.reply({ content: "Kamu masih duty!", ephemeral: true });
 
-      const startTime = new Date();
-
       await prisma.dutySession.create({
-        data: { userId, startTime }
+        data: { userId, startTime: new Date() }
       });
 
-      const jamMulai = formatWIBFull(startTime);
-
-      await interaction.reply(`🟢 Duty dimulai pada ${jamMulai}`);
+      await interaction.reply("Duty dimulai!");
 
       const embed = new EmbedBuilder()
         .setTitle("🟢 DUTY START")
-        .addFields(
-          { name: "User", value: username },
-          { name: "Jam Mulai", value: jamMulai }
-        )
+        .addFields({ name: "User", value: username })
         .setTimestamp()
         .setColor("Green");
 
       await sendLog(embed);
     }
 
- if (interaction.commandName === "duty_end") {
+    // ================= DUTY END =================
+    if (interaction.commandName === "duty_end") {
 
       const active = await prisma.dutySession.findFirst({
         where: { userId, endTime: null }
@@ -269,37 +262,20 @@ if (interaction.commandName === "duty_start") {
         return interaction.reply({ content: "Kamu belum mulai duty.", ephemeral: true });
 
       const endTime = new Date();
-
-      const totalMs = endTime - active.startTime;
-      const totalMenit = Math.floor(totalMs / 60000);
-      const jam = Math.floor(totalMenit / 60);
-      const menit = totalMenit % 60;
+      const duration = Math.floor((endTime - active.startTime) / 60000);
 
       await prisma.dutySession.update({
         where: { id: active.id },
-        data: {
-          endTime,
-          duration: totalMenit
-        }
+        data: { endTime, duration }
       });
 
-      const jamMulai = formatWIBFull(active.startTime);
-      const jamSelesai = formatWIBFull(endTime);
-
-      await interaction.reply(
-        `🔴 Duty selesai!\n\n` +
-        `🕒 Mulai : ${jamMulai}\n` +
-        `🕒 Selesai : ${jamSelesai}\n` +
-        `⏱ Total : ${jam} jam ${menit} menit`
-      );
+      await interaction.reply(`Duty selesai. Total: ${duration} menit.`);
 
       const embed = new EmbedBuilder()
         .setTitle("🔴 DUTY END")
         .addFields(
           { name: "User", value: username },
-          { name: "Jam Mulai", value: jamMulai },
-          { name: "Jam Selesai", value: jamSelesai },
-          { name: "Total Duty", value: `${jam} jam ${menit} menit` }
+          { name: "Durasi", value: `${duration} menit` }
         )
         .setTimestamp()
         .setColor("Red");
@@ -319,10 +295,15 @@ if (interaction.commandName === "duty_start") {
       const recipes = [];
 
       for (const menu of menuList) {
-        const recipe = await prisma.recipe.findUnique({
-          where: { name: menu },
-          include: { ingredients: { include: { stock: true } } }
-        });
+      const recipe = await prisma.recipe.findFirst({
+        where: {
+          name: {
+            equals: menu,
+            mode: "insensitive"
+          }
+        },
+        include: { ingredients: { include: { stock: true } } }
+      });
 
         if (!recipe)
           return interaction.reply({ content: `Menu ${menu} tidak ditemukan.`, ephemeral: true });
@@ -423,6 +404,7 @@ if (interaction.commandName === "stock_update") {
     });
   }
 
+  // 🔎 Cari bahan (case insensitive)
   const stock = await prisma.stock.findFirst({
     where: {
       name: {
@@ -452,17 +434,20 @@ if (interaction.commandName === "stock_update") {
     });
   }
 
+  // 💾 Update database
   await prisma.stock.update({
     where: { id: stock.id },
     data: { quantity: newQty }
   });
 
+  // 🔔 Reply ke user
   await interaction.reply(
     `📦 Stock **${stock.name}** sekarang: ${newQty}`
   );
 
   const username = interaction.user.username;
 
+  // 📜 Log Embed
   const embed = new EmbedBuilder()
     .setTitle("📦 STOCK UPDATE")
     .addFields(
@@ -479,83 +464,60 @@ if (interaction.commandName === "stock_update") {
   await sendStockToChannel();
 }
 
-if (interaction.commandName === "belanja") {
+    if (interaction.commandName === "belanja") {
 
-  const itemsInput = interaction.options.getString("items");
-  const deskripsi = interaction.options.getString("deskripsi");
+      const bahanInput = interaction.options.getString("bahan");
+      const jumlah = interaction.options.getInteger("jumlah");
+      const deskripsi = interaction.options.getString("deskripsi") || "-";
 
-  const itemsArray = itemsInput.split(",");
-
-  let totalSemua = 0;
-  let summaryText = "";
-
-  await prisma.$transaction(async tx => {
-
-    for (let rawItem of itemsArray) {
-
-      const [namaRaw, jumlahRaw] = rawItem.split(":");
-
-      if (!namaRaw || !jumlahRaw)
-        throw new Error("Format salah. Gunakan nama:jumlah");
-
-      const nama = namaRaw.trim();
-      const jumlah = parseInt(jumlahRaw.trim());
-
-      if (isNaN(jumlah) || jumlah <= 0)
-        throw new Error(`Jumlah tidak valid untuk ${nama}`);
-
-      const stock = await tx.stock.findFirst({
+      const stock = await prisma.stock.findFirst({
         where: {
           name: {
-            equals: nama,
+            equals: bahanInput,
             mode: "insensitive"
           }
         }
       });
 
       if (!stock)
-        throw new Error(`Bahan ${nama} tidak ditemukan.`);
+        return interaction.reply({
+          content: "Bahan tidak ditemukan di database.",
+          flags: 64
+        });
 
       const hargaPerPcs = stock.price;
       const totalHarga = hargaPerPcs * jumlah;
       const newQuantity = stock.quantity + jumlah;
 
-      await tx.stock.update({
+      await prisma.stock.update({
         where: { id: stock.id },
         data: { quantity: newQuantity }
       });
 
-      totalSemua += totalHarga;
+      await interaction.reply(
+        `🛒 **BELANJA BERHASIL**\n\n` +
+        `📦 Bahan      : ${stock.name}\n` +
+        `📊 Jumlah     : +${jumlah}\n` +
+        `💰 Harga/Pcs  : ${hargaPerPcs}\n` +
+        `💵 Total      : ${totalHarga}\n` +
+        `📝 Deskripsi  : ${deskripsi}\n\n` +
+        `📈 Stock Sekarang : ${newQuantity}`
+      );
 
-      summaryText +=
-        `📦 ${stock.name}\n` +
-        `   +${jumlah} pcs\n` +
-        `   Total: ${totalHarga}\n\n`;
+      const embed = new EmbedBuilder()
+        .setTitle("🛒 BELANJA")
+        .addFields(
+          { name: "User", value: username },
+          { name: "Bahan", value: stock.name },
+          { name: "Jumlah", value: `+${jumlah}` },
+          { name: "Total", value: `${totalHarga}` }
+        )
+        .setTimestamp()
+        .setColor("Purple");
+
+      await sendLog(embed);
+      await sendStockToChannel();
     }
-
-  });
-
-  await interaction.reply(
-    `🛒 **BELANJA BERHASIL** 🛒\n\n` +
-    summaryText +
-    `📝 Deskripsi: ${deskripsi}\n\n` +
-    `💵 TOTAL SEMUA: ${totalSemua}`
-  );
-
-  const embed = new EmbedBuilder()
-    .setTitle("🛒 BELANJA MULTI ITEM")
-    .addFields(
-      { name: "User", value: username },
-      { name: "Total Belanja", value: `${totalSemua}` },
-      { name: "Deskripsi", value: deskripsi }
-    )
-    .setTimestamp()
-    .setColor("Purple");
-
-  await sendLog(embed);
-  await sendStockToChannel();
-}
-
 
   } catch (err) {
     console.error(err);
@@ -565,5 +527,6 @@ if (interaction.commandName === "belanja") {
 
 });
 
-console.log("Server time sekarang:", new Date());
+console.log("TOKEN TYPE:", typeof process.env.DISCORD_TOKEN);
+console.log("TOKEN VALUE:", process.env.DISCORD_TOKEN);
 client.login(process.env.DISCORD_TOKEN);
