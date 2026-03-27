@@ -43,7 +43,7 @@ async function main() {
       { name: "Jasmine Tea", category: "drink" },
       { name: "Iced Lemon Tea", category: "drink" },
       { name: "Iced Chocolate", category: "drink" },
-      { name: "Strawberry Infused Water", category: "drink" }
+      { name: "Triple Berry Soda", category: "drink" }
     ],
     skipDuplicates: true
   });
