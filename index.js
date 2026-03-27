@@ -183,8 +183,8 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
 const paketMapping = {
   "dinein a": ["Creamy Mushroom Pasta", "Sparkling Water A"],
-  "dinein b": ["Pepper Crusted Portobello Steak", "Sparkling Water B"
-  "takeaway a": ["Butter Chicken Rice", "Jasmine Tea"],"],
+  "dinein b": ["Pepper Crusted Portobello Steak", "Sparkling Water B"],
+  "takeaway a": ["Butter Chicken Rice", "Jasmine Tea"],
   "takeaway b": ["Chicken Cordon Blue", "Iced Lemon Tea"],
   "dessert a": ["Tiramisu", "Iced Chocolate"],
   "dessert b": ["Cheese Quiche", "Triple Berry Soda"]
