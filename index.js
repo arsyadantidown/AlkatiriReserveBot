@@ -60,25 +60,15 @@ async function generateStockMessage() {
 
     const paddedName = nameFormatted.padEnd(13, " ");
 
-    message += `${paddedName} | ${s.quantity}/${s.maxStock} ${indicator}\n`;
+    const priceText = s.price ? `Rp${s.price}` : "-";
+    const paddedPrice = priceText.padEnd(10, " ");
+
+    message += `${paddedName} | ${s.quantity}/${s.maxStock} | ${paddedPrice} ${indicator}\n`;
   });
 
   message += "```";
 
   return message;
-}
-
-async function sendStockToChannel() {
-  try {
-    const channel = await client.channels.fetch(process.env.STOCK_CHANNEL_ID);
-    if (!channel) return;
-
-    const stockMessage = await generateStockMessage();
-    await channel.send(stockMessage);
-
-  } catch (err) {
-    console.error("Stock channel error:", err);
-  }
 }
 
 const commands = [
@@ -149,15 +139,10 @@ const commands = [
 
   new SlashCommandBuilder()
     .setName("belanja")
-    .setDescription("Beli bahan dan tambah stock")
+    .setDescription("Beli bahan (multi: ayam=10, nasi=5)")
     .addStringOption(option =>
       option.setName("bahan")
-        .setDescription("Nama bahan")
-        .setRequired(true)
-    )
-    .addIntegerOption(option =>
-      option.setName("jumlah")
-        .setDescription("Jumlah beli")
+        .setDescription("Format: ayam=10, nasi=5")
         .setRequired(true)
     )
     .addStringOption(option =>
@@ -183,12 +168,27 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
 const paketMapping = {
   "dinein a": ["Creamy Mushroom Pasta", "Sparkling Water A"],
-  "dinein b": ["Pepper Crusted Portobello Steak", "Sparkling Water B"],
-  "takeaway a": ["Butter Chicken Rice", "Jasmine Tea"],
+  "dinein b": ["Butter Chicken Rice", "Jasmine Tea"],
+  "takeaway a": ["Pepper Crusted Portobello Steak", "Sparkling Water B"],
   "takeaway b": ["Chicken Cordon Blue", "Iced Lemon Tea"],
   "dessert a": ["Tiramisu", "Iced Chocolate"],
-  "dessert b": ["Cheese Quiche", "Triple Berry Soda"]
+  "dessert b": ["Cheese Quiche", "Strawberry Infused Water"]
 };
+
+let stockMessageId = null;
+
+async function sendStockToChannel() {
+  const channel = await client.channels.fetch(process.env.STOCK_CHANNEL_ID);
+  const stockMessage = await generateStockMessage();
+
+  if (stockMessageId) {
+    const msg = await channel.messages.fetch(stockMessageId);
+    await msg.edit(stockMessage);
+  } else {
+    const msg = await channel.send(stockMessage);
+    stockMessageId = msg.id;
+  }
+}
 
 client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
@@ -222,6 +222,7 @@ client.on("interactionCreate", async interaction => {
         ephemeral: true
       });
     }
+  
 
     // ================= DUTY START =================
     if (interaction.commandName === "duty_start") {
@@ -464,69 +465,83 @@ if (interaction.commandName === "stock_update") {
   await sendStockToChannel();
 }
 
-    if (interaction.commandName === "belanja") {
+if (interaction.commandName === "belanja") {
 
-      const bahanInput = interaction.options.getString("bahan");
-      const jumlah = interaction.options.getInteger("jumlah");
-      const deskripsi = interaction.options.getString("deskripsi") || "-";
+  const bahanInput = interaction.options.getString("bahan");
+  const deskripsi = interaction.options.getString("deskripsi") || "-";
 
-      const stock = await prisma.stock.findFirst({
-        where: {
-          name: {
-            equals: bahanInput,
-            mode: "insensitive"
-          }
-        }
+  const items = bahanInput.split(",").map(i => i.trim());
+
+  let resultText = "";
+  let totalHargaSemua = 0;
+
+  for (const item of items) {
+    const [nama, qtyStr] = item.split("=");
+
+    const jumlah = parseInt(qtyStr);
+    if (!nama || isNaN(jumlah)) {
+      return interaction.reply({
+        content: `Format salah di: ${item}`,
+        ephemeral: true
       });
-
-      if (!stock)
-        return interaction.reply({
-          content: "Bahan tidak ditemukan di database.",
-          flags: 64
-        });
-
-      const hargaPerPcs = stock.price;
-      const totalHarga = hargaPerPcs * jumlah;
-      const newQuantity = stock.quantity + jumlah;
-
-      await prisma.stock.update({
-        where: { id: stock.id },
-        data: { quantity: newQuantity }
-      });
-
-      await interaction.reply(
-        `🛒 **BELANJA BERHASIL**\n\n` +
-        `📦 Bahan      : ${stock.name}\n` +
-        `📊 Jumlah     : +${jumlah}\n` +
-        `💰 Harga/Pcs  : ${hargaPerPcs}\n` +
-        `💵 Total      : ${totalHarga}\n` +
-        `📝 Deskripsi  : ${deskripsi}\n\n` +
-        `📈 Stock Sekarang : ${newQuantity}`
-      );
-
-      const embed = new EmbedBuilder()
-        .setTitle("🛒 BELANJA")
-        .addFields(
-          { name: "User", value: username },
-          { name: "Bahan", value: stock.name },
-          { name: "Jumlah", value: `+${jumlah}` },
-          { name: "Total", value: `${totalHarga}` }
-        )
-        .setTimestamp()
-        .setColor("Purple");
-
-      await sendLog(embed);
-      await sendStockToChannel();
     }
 
-  } catch (err) {
-    console.error(err);
-    if (!interaction.replied)
-      return interaction.reply({ content: "Terjadi error.", ephemeral: true });
+    const stock = await prisma.stock.findFirst({
+      where: {
+        name: {
+          equals: nama,
+          mode: "insensitive"
+        }
+      }
+    });
+
+    if (!stock) {
+      return interaction.reply({
+        content: `Bahan ${nama} tidak ditemukan.`,
+        ephemeral: true
+      });
+    }
+
+    const hargaPerPcs = stock.price;
+    const totalHarga = hargaPerPcs * jumlah;
+    const newQuantity = stock.quantity + jumlah;
+
+    await prisma.stock.update({
+      where: { id: stock.id },
+      data: { quantity: newQuantity }
+    });
+
+    totalHargaSemua += totalHarga;
+
+    resultText +=
+      `📦 ${stock.name} (+${jumlah})\n` +
+      `💰 ${hargaPerPcs} x ${jumlah} = ${totalHarga}\n\n`;
   }
 
-});
+  await interaction.reply(
+    `🛒 **BELANJA BERHASIL**\n\n` +
+    resultText +
+    `💵 TOTAL SEMUA: ${totalHargaSemua}\n\n` +
+    `📝 Deskripsi: ${deskripsi}`
+  );
 
-console.log("TOKEN TYPE:", typeof process.env.DISCORD_TOKEN);
-console.log("TOKEN VALUE:", process.env.DISCORD_TOKEN);
+  const embed = new EmbedBuilder()
+    .setTitle("🛒 BELANJA")
+    .addFields(
+      { name: "User", value: username },
+      { name: "Total", value: `${totalHargaSemua}` }
+    )
+    .setTimestamp()
+    .setColor("Purple");
+
+  await sendLog(embed);
+  await sendStockToChannel();
+}
+
+} catch (err) {
+  console.error(err);
+  if (!interaction.replied)
+    return interaction.reply({ content: "Terjadi error.", ephemeral: true });
+}
+});
 client.login(process.env.DISCORD_TOKEN);
