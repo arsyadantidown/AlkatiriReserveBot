@@ -34,39 +34,34 @@ async function generateStockMessage() {
 
   if (stocks.length === 0) return "Stock kosong.";
 
-  let message = "```\n";
-  message += "STOCK BAHAN SAAT INI: \n\n";
+let message = "```\n";
+message += "STOCK BAHAN SAAT INI\n\n";
+message += "Nama           | Qty        | Harga     | Status\n";
+message += "------------------------------------------------\n";
 
-    stocks.forEach(s => {
+stocks.forEach(s => {
 
-    const percent = s.maxStock > 0 
-  ? s.quantity / s.maxStock 
-  : 0;
+  const percent = s.maxStock > 0 
+    ? s.quantity / s.maxStock 
+    : 0;
 
-      let indicator;
+  let indicator;
+  if (s.quantity === 0) indicator = "EMPTY";
+  else if (percent < 0.5) indicator = "LOW";
+  else indicator = "OK";
 
-      if (s.quantity === 0) {
-        indicator = "🟥"; 
-      } else if (percent < 0.5) {
-        indicator = "🟨"; 
-      } else {
-        indicator = "🟩"; 
-      }
+  const nameFormatted =
+    s.name.charAt(0).toUpperCase() +
+    s.name.slice(1);
 
+  const nameCol = nameFormatted.padEnd(15, " ");
+  const qtyCol = `${s.quantity}/${s.maxStock}`.padEnd(10, " ");
+  const priceCol = (s.price ? `Rp${s.price}` : "-").padEnd(10, " ");
 
-    const nameFormatted =
-      s.name.charAt(0).toUpperCase() +
-      s.name.slice(1);
+  message += `${nameCol} | ${qtyCol} | ${priceCol} | ${indicator}\n`;
+});
 
-    const paddedName = nameFormatted.padEnd(13, " ");
-
-    const priceText = s.price ? `Rp${s.price}` : "-";
-    const paddedPrice = priceText.padEnd(10, " ");
-
-    message += `${paddedName} | ${s.quantity}/${s.maxStock} | ${paddedPrice} ${indicator}\n`;
-  });
-
-  message += "```";
+message += "```";
 
   return message;
 }
