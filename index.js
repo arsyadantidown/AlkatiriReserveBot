@@ -46,9 +46,9 @@ stocks.forEach(s => {
     : 0;
 
   let indicator;
-  if (s.quantity === 0) indicator = "EMPTY";
-  else if (percent < 0.5) indicator = "LOW";
-  else indicator = "OK";
+  if (s.quantity === 0) indicator = "🟢";
+  else if (percent < 0.7) indicator = "🟢";
+  else indicator = "🔴";
 
   const nameFormatted =
     s.name.charAt(0).toUpperCase() +
