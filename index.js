@@ -68,7 +68,6 @@ message += "```";
 
 const commands = [
 
-  // ================= REGISTER =================
   new SlashCommandBuilder()
     .setName("register")
     .setDescription("Daftarkan nama in-game")
@@ -164,7 +163,7 @@ const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 const paketMapping = {
   "dinein a": ["Creamy Mushroom Pasta", "Sparkling Water A"],
   "dinein b": ["Pepper Crusted Portobello Steak", "Sparkling Water B"],
-  "takeaway a": ["Butter Chicken Rice", "Jasmine Tea""],
+  "takeaway a": ["Butter Chicken Rice", "Jasmine Tea"],
   "takeaway b": ["Chicken Cordon Blue", "Iced Lemon Tea"],
   "dessert a": ["Tiramisu", "Iced Chocolate"],
   "dessert b": ["Cheese Quiche", "Triple Berry Soda"]
@@ -182,7 +181,6 @@ client.on("interactionCreate", async interaction => {
 
   const userId = interaction.user.id;
 
-  // Ambil data player
   const player = await prisma.player.findUnique({
     where: { userId }
   });
@@ -193,7 +191,6 @@ client.on("interactionCreate", async interaction => {
 
   try {
 
-    // ================= REGISTER =================
     if (interaction.commandName === "register") {
 
       const nama = interaction.options.getString("nama");
@@ -210,8 +207,6 @@ client.on("interactionCreate", async interaction => {
       });
     }
   
-
-    // ================= DUTY START =================
     if (interaction.commandName === "duty_start") {
 
       if (!player)
@@ -239,7 +234,6 @@ client.on("interactionCreate", async interaction => {
       await sendLog(embed);
     }
 
-    // ================= DUTY END =================
     if (interaction.commandName === "duty_end") {
 
       const active = await prisma.dutySession.findFirst({
@@ -392,7 +386,6 @@ if (interaction.commandName === "stock_update") {
     });
   }
 
-  // 🔎 Cari bahan (case insensitive)
   const stock = await prisma.stock.findFirst({
     where: {
       name: {
@@ -422,20 +415,17 @@ if (interaction.commandName === "stock_update") {
     });
   }
 
-  // 💾 Update database
   await prisma.stock.update({
     where: { id: stock.id },
     data: { quantity: newQty }
   });
 
-  // 🔔 Reply ke user
   await interaction.reply(
     `📦 Stock **${stock.name}** sekarang: ${newQty}`
   );
 
   const username = interaction.user.username;
 
-  // 📜 Log Embed
   const embed = new EmbedBuilder()
     .setTitle("📦 STOCK UPDATE")
     .addFields(
