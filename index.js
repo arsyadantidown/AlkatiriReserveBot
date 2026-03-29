@@ -175,19 +175,11 @@ const paketMapping = {
   "dessert b": ["Cheese Quiche", "Strawberry Infused Water"]
 };
 
-let stockMessageId = null;
-
 async function sendStockToChannel() {
   const channel = await client.channels.fetch(process.env.STOCK_CHANNEL_ID);
   const stockMessage = await generateStockMessage();
 
-  if (stockMessageId) {
-    const msg = await channel.messages.fetch(stockMessageId);
-    await msg.edit(stockMessage);
-  } else {
-    const msg = await channel.send(stockMessage);
-    stockMessageId = msg.id;
-  }
+  await channel.send(stockMessage);
 }
 
 client.on("interactionCreate", async interaction => {
