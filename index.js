@@ -47,7 +47,7 @@ stocks.forEach(s => {
 
   let indicator;
   if (s.quantity === 0) indicator = "🟢";
-  else if (percent < 0.5) indicator = "🟢";
+  else if (percent < 0.5) indicator = "🟡";
   else indicator = "🔴";
 
   const nameFormatted =
