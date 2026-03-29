@@ -167,7 +167,7 @@ const paketMapping = {
   "takeaway a": ["Pepper Crusted Portobello Steak", "Sparkling Water B"],
   "takeaway b": ["Chicken Cordon Blue", "Iced Lemon Tea"],
   "dessert a": ["Tiramisu", "Iced Chocolate"],
-  "dessert b": ["Cheese Quiche", "Strawberry Infused Water"]
+  "dessert b": ["Cheese Quiche", "Triple Berry Soda"]
 };
 
 async function sendStockToChannel() {
