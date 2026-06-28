@@ -202,7 +202,7 @@ client.on("interactionCreate", async interaction => {
       });
 
       return interaction.reply({
-        content: `✅ Nama in-game diset ke ${nama}`,
+        content: ` Nama in-game diset ke ${nama}`,
         ephemeral: true
       });
     }
@@ -351,16 +351,16 @@ client.on("interactionCreate", async interaction => {
     if (!drinkText) drinkText = "-";
 
     await interaction.reply(
-      `🔥 **BERHASIL MASAK** 🔥\n\n` +
-      `📦 Paket : ${menuName}\n` +
-      `📋 **Isi Paket:**\n${isiPaket}\n\n` +
-      `🍽 Jumlah : ${jumlahInput}x\n\n` +
-      `🍗 **Bahan Makanan Terpakai:**\n${foodText}\n` +
-      `🥤 **Bahan Minuman Terpakai:**\n${drinkText}`
+      ` **BERHASIL MASAK** \n\n` +
+      ` Paket : ${menuName}\n` +
+      ` **Isi Paket:**\n${isiPaket}\n\n` +
+      ` Jumlah : ${jumlahInput}x\n\n` +
+      ` **Bahan Makanan Terpakai:**\n${foodText}\n` +
+      ` **Bahan Minuman Terpakai:**\n${drinkText}`
     );
 
       const embed = new EmbedBuilder()
-        .setTitle("🍳 MASAK")
+        .setTitle(" MASAK")
         .addFields(
           { name: "User", value: username },
           { name: "Paket", value: menuName },
@@ -421,13 +421,13 @@ if (interaction.commandName === "stock_update") {
   });
 
   await interaction.reply(
-    `📦 Stock **${stock.name}** sekarang: ${newQty}`
+    ` Stock **${stock.name}** sekarang: ${newQty}`
   );
 
   const username = interaction.user.username;
 
   const embed = new EmbedBuilder()
-    .setTitle("📦 STOCK UPDATE")
+    .setTitle(" STOCK UPDATE")
     .addFields(
       { name: "User", value: username },
       { name: "Bahan", value: stock.name },
@@ -491,15 +491,15 @@ if (interaction.commandName === "belanja") {
     totalHargaSemua += totalHarga;
 
     resultText +=
-      `📦 ${stock.name} (+${jumlah})\n` +
-      `💰 ${hargaPerPcs} x ${jumlah} = ${totalHarga}\n\n`;
+      ` ${stock.name} (+${jumlah})\n` +
+      ` ${hargaPerPcs} x ${jumlah} = ${totalHarga}\n\n`;
   }
 
   await interaction.reply(
-    `🛒 **BELANJA BERHASIL**\n\n` +
+    ` **BELANJA BERHASIL**\n\n` +
     resultText +
-    `💵 TOTAL SEMUA: ${totalHargaSemua}\n\n` +
-    `📝 Deskripsi: ${deskripsi}`
+    ` TOTAL SEMUA: ${totalHargaSemua}\n\n` +
+    ` Deskripsi: ${deskripsi}`
   );
 
   const embed = new EmbedBuilder()
