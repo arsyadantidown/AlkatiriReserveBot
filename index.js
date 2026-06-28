@@ -165,7 +165,7 @@ const paketMapping = {
   "dinein b": ["Pepper Crusted Portobello Steak", "Sparkling Water B"],
   "takeaway a": ["Butter Chicken Rice", "Jasmine Tea"],
   "takeaway b": ["Chicken Cordon Blue", "Iced Lemon Tea"],
-  "dessert a": ["Tiramisu", "Iced Chocolate"],
+  "dessert a": ["Tiramisu Gelato"],
   "dessert b": ["Cheese Quiche", "Triple Berry Soda"]
 };
 
